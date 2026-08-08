@@ -1,7 +1,6 @@
-const { Pool } = require("pg");
+require("dotenv").config({ override: true });
 
-// Do NOT load dotenv here. `server.js` must load dotenv exactly once before
-// this module is required so environment variables are available here.
+const { Pool } = require("pg");
 
 // If a full DATABASE_URL is provided, use it. Otherwise require the explicit
 // DB_* variables. Do NOT fall back to other usernames or defaults.
@@ -27,6 +26,7 @@ if (missing.length > 0) {
 }
 
 const dbHost = process.env.DB_HOST;
+const normalizedDbHost = dbHost === "localhost" ? "127.0.0.1" : dbHost;
 const dbPort = Number(process.env.DB_PORT);
 if (Number.isNaN(dbPort)) {
   console.error("DB_PORT is not a valid number:", process.env.DB_PORT);
@@ -34,13 +34,15 @@ if (Number.isNaN(dbPort)) {
 }
 const dbUser = process.env.DB_USER;
 const dbName = process.env.DB_NAME;
-const dbPassword = process.env.DB_PASSWORD; // may be empty or undefined
+const dbPassword = process.env.DB_PASSWORD && String(process.env.DB_PASSWORD).trim() !== ""
+  ? process.env.DB_PASSWORD
+  : undefined;
 
 // Print final resolved configuration excluding password
-console.log(`ℹ️  Resolved Postgres config: host="${dbHost}" port=${dbPort} user="${dbUser}" database="${dbName}"`);
+console.log(`ℹ️  Resolved Postgres config: host="${normalizedDbHost}" port=${dbPort} user="${dbUser}" database="${dbName}"`);
 
 const pool = new Pool({
-  host: dbHost,
+  host: normalizedDbHost,
   port: dbPort,
   user: dbUser,
   password: dbPassword,

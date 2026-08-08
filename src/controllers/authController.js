@@ -1,26 +1,9 @@
 const userModel = require("../models/userModel");
-
-const getUniqueViolationMessage = (error) => {
-  const constraint = String(error.constraint || "").toLowerCase();
-  const detail = String(error.detail || "").toLowerCase();
-
-  if (constraint.includes("email") || detail.includes("email")) {
-    return "Email already registered";
-  }
-
-  if (constraint.includes("phone") || detail.includes("phone")) {
-    return "Phone number already registered";
-  }
-
-  return "User already exists";
-};
+const { hashPassword } = require("../utils/password");
 
 const registerUser = async (req, res) => {
   try {
-    const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
-    const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
-    const phone = typeof req.body.phone === "string" ? req.body.phone.trim() : "";
-    const password = typeof req.body.password === "string" ? req.body.password.trim() : "";
+    const { name, email, phone, password } = req.body;
 
     // Check required fields
     if (!name || !email || !phone || !password) {
@@ -30,32 +13,33 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Check if email already exists
-    const existingEmail = await userModel.findUserByEmail(email);
+    // Check password length
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
+    }
 
-    if (existingEmail) {
+    // Check if email already exists
+    const existingUser = await userModel.findUserByEmail(email);
+
+    if (existingUser) {
       return res.status(409).json({
         success: false,
         message: "Email already registered",
       });
     }
 
-    // Check if phone already exists
-    const existingPhone = await userModel.findUserByPhone(phone);
-
-    if (existingPhone) {
-      return res.status(409).json({
-        success: false,
-        message: "Phone number already registered",
-      });
-    }
+    // Hash password before storing it
+    const hashedPassword = await hashPassword(password);
 
     // Create user
     const user = await userModel.createUser(
       name,
       email,
       phone,
-      password
+      hashedPassword
     );
 
     return res.status(201).json({
@@ -65,13 +49,6 @@ const registerUser = async (req, res) => {
     });
 
   } catch (error) {
-    if (error && error.code === "23505") {
-      return res.status(409).json({
-        success: false,
-        message: getUniqueViolationMessage(error),
-      });
-    }
-
     console.error("Registration error:", error);
 
     return res.status(500).json({
@@ -81,57 +58,6 @@ const registerUser = async (req, res) => {
   }
 };
 
-const loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Check required fields
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required",
-      });
-    }
-
-    // Find user by email
-    const user = await userModel.findUserByEmail(email);
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
-
-    // Check password
-    if (user.password !== password) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Login successful",
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-      },
-    });
-
-  } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
 module.exports = {
   registerUser,
-  loginUser,
 };

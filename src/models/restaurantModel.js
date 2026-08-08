@@ -67,8 +67,6 @@ const getRestaurantById = async (restaurantId) => {
   return result.rows[0];
 };
 
-const pool = require("../config/db");
-
 const findRestaurantByOwnerId = async (ownerId) => {
 
   const result = await pool.query(

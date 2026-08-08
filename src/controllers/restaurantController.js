@@ -94,7 +94,14 @@ const getMyRestaurant = async (req, res) => {
 // Get restaurant by ID
 const getRestaurant = async (req, res) => {
   try {
-    const restaurantId = req.params.id;
+    const restaurantId = Number.parseInt(req.params.id, 10);
+
+    if (!Number.isInteger(restaurantId) || restaurantId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid restaurant ID",
+      });
+    }
 
     const restaurant =
       await restaurantModel.getRestaurantById(restaurantId);
@@ -198,57 +205,6 @@ const updateRestaurant = async (req, res) => {
   }
 };
 
-//getting my own restaraunt 
-
-const restaurantModel = require("../models/restaurantModel");
-
-const getMyRestaurant = async (req, res) => {
-
-  try {
-
-    const ownerId = req.user.userId;
-
-    const restaurant =
-
-      await restaurantModel.findRestaurantByOwnerId(ownerId);
-
-    if (!restaurant) {
-
-      return res.status(404).json({
-
-        success: false,
-
-        message: "Restaurant not found",
-
-      });
-
-    }
-
-    return res.status(200).json({
-
-      success: true,
-
-      restaurant,
-
-    });
-
-  } catch (error) {
-
-    console.error("Get restaurant error:", error);
-
-    return res.status(500).json({
-
-      success: false,
-
-      message: "Internal server error",
-
-    });
-
-  }
-
-};
-
-
 // Deactivate restaurant
 const deactivateRestaurant = async (req, res) => {
   try {
@@ -288,5 +244,4 @@ module.exports = {
   getRestaurants,
   updateRestaurant,
   deactivateRestaurant,
-   getMyRestaurant,
 };

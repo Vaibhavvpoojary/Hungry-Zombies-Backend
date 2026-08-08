@@ -19,9 +19,15 @@ const router = express.Router();
 // Get all active restaurants
 router.get("/", getRestaurants);
 
+// Get logged-in owner's restaurant (alias)
+router.get(
+  "/me",
+  authMiddleware,
+  getMyRestaurant
+);
+
 // Get restaurant by ID
 router.get("/:id", getRestaurant);
-
 
 // Protected routes
 

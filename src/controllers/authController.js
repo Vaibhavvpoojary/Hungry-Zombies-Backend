@@ -1,9 +1,31 @@
 const userModel = require("../models/userModel");
-const { hashPassword } = require("../utils/password");
+const { hashPassword, comparePassword } = require("../utils/password");
+const { generateToken } = require("../utils/jwt");
+
+const normalizeField = (value) => {
+  return typeof value === "string" ? value.trim() : "";
+};
+
+const sanitizeUser = (user) => {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    created_at: user.created_at,
+  };
+};
 
 const registerUser = async (req, res) => {
   try {
-    const { name, email, phone, password } = req.body;
+    const name = normalizeField(req.body.name);
+    const email = normalizeField(req.body.email);
+    const phone = normalizeField(req.body.phone);
+    const password = normalizeField(req.body.password);
 
     // Check required fields
     if (!name || !email || !phone || !password) {
@@ -58,6 +80,55 @@ const registerUser = async (req, res) => {
   }
 };
 
+const loginUser = async (req, res) => {
+  try {
+    const email = normalizeField(req.body.email);
+    const password = normalizeField(req.body.password);
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    const user = await userModel.findUserByEmail(email);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+     
+    const token = generateToken(user); 
+
+    const passwordMatches = await comparePassword(password, user.password);
+
+    if (!passwordMatches) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: sanitizeUser(user),
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 module.exports = {
   registerUser,
+  loginUser,
 };
